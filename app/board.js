@@ -47,15 +47,17 @@ export function Board({ initial, viewer }) {
           <div>
             <p className="eyebrow">Deye Cloud · {data.dataCenter}</p>
             <h1>Plant watch</h1>
-            <p className="account">
-              {data.accountEmail} · {viewer}
-              {fetched ? ` · Updated ${fetched}` : ""}
-              {data.cached ? " · Held for a minute" : ""}
-            </p>
           </div>
         </div>
+        <p className="account">
+          <span>{data.accountEmail}</span>
+          <span>{viewer}</span>
+          {fetched ? <span>Updated {fetched}</span> : null}
+          {data.cached ? <span>Held for a minute</span> : null}
+        </p>
         <div className="actions">
           <span className={`pill ${data.ok && data.source === "live" ? "live" : data.ok ? "sample" : "error"}`}>
+            <span className="dot" aria-hidden="true" />
             {data.source === "sample" ? "Sample data" : data.ok ? "Live" : "Deye error"}
           </span>
           <button className="refresh" type="button" onClick={refresh} disabled={pending}>
@@ -91,14 +93,17 @@ function Compare({ plants }) {
   const rows = plants.filter((plant) => plant.dailyGeneration != null);
   if (rows.length < 2) return null;
   return (
-    <section className="compare">
-      <div>
-        <h2>Today, side by side</h2>
+    <section className="compare" aria-label="Today, side by side">
+      <h2>Today, side by side</h2>
+      <div className="compare-grid">
         {rows.map((plant) => (
-          <p key={plant.id || plant.name}>
-            {plant.name}: {formatNumber(plant.dailyGeneration)} kWh
-            {plant.dailyGenerationPerKw == null ? "" : ` · ${formatNumber(plant.dailyGenerationPerKw, 2)} kWh per installed kW`}
-          </p>
+          <article key={plant.id || plant.name} className="compare-card">
+            <p className="kicker">{plant.name}</p>
+            <p className="metric">{formatNumber(plant.dailyGeneration)} <span>kWh</span></p>
+            <p className="fine">
+              {plant.dailyGenerationPerKw == null ? "Yield per installed kW is missing" : `${formatNumber(plant.dailyGenerationPerKw, 2)} kWh per installed kW`}
+            </p>
+          </article>
         ))}
       </div>
     </section>
@@ -106,14 +111,18 @@ function Compare({ plants }) {
 }
 
 function Plant({ plant }) {
-  const soc = plant.batterySOC;
-  const width = soc == null ? 0 : Math.max(0, Math.min(100, soc));
   return (
     <article className="plant">
-      <header>
+      <header className="plant-head">
         <div>
-          <h2>{plant.name}</h2>
-          <p className="meta">
+          <div className="title-row">
+            <h2>{plant.name}</h2>
+            <span className={`status ${statusTone(plant.connectionStatus)}`}>
+              <span className="dot" aria-hidden="true" />
+              {plant.connectionStatus || "Status missing"}
+            </span>
+          </div>
+          <p className="fine">
             {plant.id ? `Plant ${plant.id}` : "Plant id missing"}
             {plant.installedCapacity == null ? "" : ` · ${formatNumber(plant.installedCapacity)} kW installed`}
             {plant.timezone ? ` · ${plant.timezone}` : ""}
@@ -122,28 +131,26 @@ function Plant({ plant }) {
             {[plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ") || "Place details were not in the plant list."}
           </p>
         </div>
-        <span className={`status ${statusTone(plant.connectionStatus)}`}>
-          {plant.connectionStatus || "Status missing"}
-        </span>
+        <div className="when">
+          {plant.lastUpdateLabel ? <p>Last update {plant.lastUpdateLabel}</p> : null}
+          {plant.stale === true ? <p className="warn">More than an hour old. The plant may be offline or delayed.</p> : null}
+          {plant.stale === null ? <p className="fine">Last update time is missing.</p> : null}
+        </div>
       </header>
 
-      {plant.stale === true ? <p className="warn">Last update is more than an hour old. The plant may be offline or delayed.</p> : null}
-      {plant.stale === null ? <p className="fine">Last update time is missing.</p> : null}
-      {plant.lastUpdateLabel ? <p className="fine">Last update {plant.lastUpdateLabel}</p> : null}
       {plant.latestError ? <p className="warn">{plant.latestError}</p> : null}
 
-      <div className="hero">
-        <div>
-          <p className="eyebrow">Generation</p>
+      <div className="spotlight">
+        <div className="tile energy">
+          <p className="kicker">Generation</p>
           <p className="figure">{formatNumber(plant.generationPower)} <span>power</span></p>
+          <p className="fine">Live output</p>
         </div>
-        <div className="soc">
-          <div className="soc-top">
-            <span>Battery</span>
-            <strong>{formatSoc(soc)}</strong>
-          </div>
-          <div className="track" aria-hidden="true"><div className="fill" style={{ width: `${width}%` }} /></div>
-          <p className="hint">{batteryHint(plant.batteryPower)} {plant.batteryPower == null ? "" : formatNumber(plant.batteryPower)}</p>
+        <SocGauge value={plant.batterySOC} />
+        <div className="tile">
+          <p className="kicker">Battery power</p>
+          <p className="figure quiet">{formatNumber(plant.batteryPower)}</p>
+          <p className="fine">{batteryHint(plant.batteryPower)}</p>
         </div>
       </div>
 
@@ -153,14 +160,15 @@ function Plant({ plant }) {
         <Stat label="Purchase" value={plant.purchasePower} />
         <Stat label="Wire" value={plant.wirePower} />
         <Stat label="Irradiance" value={plant.irradiateIntensity} />
-        <Stat label="Battery power" value={plant.batteryPower} />
         <Stat label="Charge" value={plant.chargePower} />
         <Stat label="Discharge" value={plant.dischargePower} />
       </div>
 
       <section className="block">
-        <h3>Today</h3>
-        {plant.dailyDate && plant.dailyDate !== "sample" ? <p className="fine">Local date {plant.dailyDate}</p> : null}
+        <div className="block-head">
+          <h3>Today</h3>
+          {plant.dailyDate && plant.dailyDate !== "sample" ? <p className="fine">Local date {plant.dailyDate}</p> : null}
+        </div>
         {plant.dailyGenerationNote ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
         <div className="stats">
           <Stat label="Generation" value={plant.daily.generation} unit="kWh" />
@@ -176,24 +184,31 @@ function Plant({ plant }) {
           <Stat label="Charge from grid" value={plant.daily.chargeFromGrid} unit="kWh" />
           <Stat label="Full-load hours" value={plant.daily.fullPowerHours} unit="h" />
         </div>
-        {plant.daily.peakPeriod ? <p className="fine">Peak period {plant.daily.peakPeriod}</p> : null}
+        {plant.daily.peakPeriod ? <p className="fine peak">Peak period {plant.daily.peakPeriod}</p> : null}
       </section>
 
       <section className="block">
-        <h3>Devices</h3>
-        <p>
-          {plant.devices.total} total · {plant.devices.online} online · {plant.devices.offline} offline
-          {plant.devices.unreported ? ` · ${plant.devices.unreported} without a connect status` : ""}
-        </p>
+        <div className="block-head">
+          <h3>Devices</h3>
+          <p className="fine">
+            {plant.devices.total} total · {plant.devices.online} online · {plant.devices.offline} offline
+            {plant.devices.unreported ? ` · ${plant.devices.unreported} without a connect status` : ""}
+          </p>
+        </div>
         {plant.devicesError ? <p className="warn">{plant.devicesError}</p> : null}
         {plant.deviceLatestError ? <p className="warn">{plant.deviceLatestError}</p> : null}
         {plant.devices.rows.map((device) => (
           <div className="device" key={device.serial || device.type}>
-            <p>
-              <strong>{device.type}</strong>
-              {device.serial ? ` · ${device.serial}` : ""}
-              {` · ${device.link}`}
-            </p>
+            <div className="device-head">
+              <div>
+                <p className="device-name">{device.type}</p>
+                {device.serial ? <p className="serial">{device.serial}</p> : null}
+              </div>
+              <span className={`status ${statusTone(device.link)}`}>
+                <span className="dot" aria-hidden="true" />
+                {device.link}
+              </span>
+            </div>
             {device.collectionLabel ? <p className="fine">Collected {device.collectionLabel}</p> : null}
             {device.sampleNote ? <p className="fine">{device.sampleNote}</p> : null}
             {device.points.length > 0 ? (
@@ -216,12 +231,41 @@ function Plant({ plant }) {
   );
 }
 
+function SocGauge({ value }) {
+  const missing = value == null || Number.isNaN(value);
+  const pct = missing ? 0 : Math.max(0, Math.min(100, value));
+  const radius = 28;
+  const circumference = 2 * Math.PI * radius;
+  const filled = (pct / 100) * circumference;
+  return (
+    <div className="tile battery" aria-label={`State of charge ${formatSoc(value)}`}>
+      <p className="kicker">State of charge</p>
+      <div className="gauge">
+        <svg viewBox="0 0 72 72" aria-hidden="true">
+          <circle className="gauge-track" cx="36" cy="36" r={radius} />
+          {missing ? null : (
+            <circle
+              className="gauge-fill"
+              cx="36"
+              cy="36"
+              r={radius}
+              strokeDasharray={`${filled} ${circumference - filled}`}
+              transform="rotate(-90 36 36)"
+            />
+          )}
+        </svg>
+        <strong>{formatSoc(value)}</strong>
+      </div>
+    </div>
+  );
+}
+
 function AlarmList({ title, alarms, error, empty }) {
   return (
     <section className="block">
       <h3>{title}</h3>
       {error ? <p className="warn">{error}</p> : null}
-      {alarms.length === 0 && !error ? <p>{empty}</p> : null}
+      {alarms.length === 0 && !error ? <p className="empty">{empty}</p> : null}
       {alarms.map((alarm, index) => (
         <div className="alarm" key={`${alarm.source}-${alarm.title}-${alarm.startedAt ?? index}`}>
           <strong>{alarm.title}</strong>
@@ -242,8 +286,11 @@ function Stat({ label, value, unit }) {
   const shown = missing ? "Missing" : typeof value === "string" ? value : formatNumber(value);
   return (
     <div className="stat">
-      <dt>{label}</dt>
-      <dd>{shown}{!missing && unit ? ` ${unit}` : ""}</dd>
+      <p className="kicker">{label}</p>
+      <p className={missing ? "value missing" : "value"}>
+        {shown}
+        {!missing && unit ? <span className="unit">{unit}</span> : null}
+      </p>
     </div>
   );
 }
@@ -261,9 +308,9 @@ function formatStamp(value) {
 
 function Sun() {
   return (
-    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <circle cx="13" cy="13" r="5" fill="currentColor" />
-      <path d="M13 2v3M13 21v3M2 13h3M21 13h3M5 5l2 2M19 19l2 2M19 7l2-2M5 21l2-2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
+      <circle cx="13" cy="13" r="4.5" fill="currentColor" />
+      <path d="M13 2.5v3M13 20.5v3M2.5 13h3M20.5 13h3M5.2 5.2l2.1 2.1M18.7 18.7l2.1 2.1M18.7 7.3l2.1-2.1M5.2 20.8l2.1-2.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
