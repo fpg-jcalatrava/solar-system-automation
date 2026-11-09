@@ -132,7 +132,7 @@ h1 {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
@@ -168,7 +168,7 @@ h1 {
 .track { height: 12px; border-radius: 999px; background: #efe4d2; overflow: hidden; margin-top: 8px; }
 .fill { height: 100%; background: linear-gradient(90deg, var(--sun), #f0b429); }
 
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 8px; margin: 8px 0 0; }
 .stat {
   margin: 0;
   padding: 10px 12px;
@@ -181,6 +181,9 @@ h1 {
 
 .block { margin-top: 14px; }
 .block h3 { margin: 0 0 6px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.device { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; margin-top: 8px; }
+.point { display: flex; justify-content: space-between; gap: 8px; margin: 0; padding: 6px 8px; background: rgba(255,255,255,0.7); border-radius: 10px; font-size: 13px; }
 .alarm { padding: 8px 0; border-top: 1px solid var(--line); }
 .alarm strong { display: block; }
 .warn { color: var(--clay); }

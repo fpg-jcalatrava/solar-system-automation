@@ -79,9 +79,9 @@ export function Board({ initial, viewer }) {
       </section>
 
       <p className="footnote">
-        Live power figures are shown as Deye returns them. The tool schema does not name a unit; Deye’s own samples treat them as watts.
-        Daily generation is energy for the plant’s local date. Deye documents history energy in kilowatt-hours.
-        Readings are fetched at most once a minute. This board only reads plants. It does not send inverter commands.
+        Live power and irradiance are shown as Deye returns them. Those tool schemas do not name a unit; Deye’s own power samples are in watts.
+        Today’s energy figures are for the plant’s local date. Deye documents that energy in kilowatt-hours, and full-load hours as hours.
+        Device points keep the name and unit Deye sends. A null reading is shown as missing. Readings are fetched at most once a minute. This board only reads plants. It does not send inverter commands.
       </p>
     </main>
   );
@@ -118,6 +118,9 @@ function Plant({ plant }) {
             {plant.installedCapacity == null ? "" : ` · ${formatNumber(plant.installedCapacity)} kW installed`}
             {plant.timezone ? ` · ${plant.timezone}` : ""}
           </p>
+          <p className="fine">
+            {[plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ") || "Place details were not in the plant list."}
+          </p>
         </div>
         <span className={`status ${statusTone(plant.connectionStatus)}`}>
           {plant.connectionStatus || "Status missing"}
@@ -148,6 +151,8 @@ function Plant({ plant }) {
         <Stat label="Consumption" value={plant.consumptionPower} />
         <Stat label="Grid" value={plant.gridPower} />
         <Stat label="Purchase" value={plant.purchasePower} />
+        <Stat label="Wire" value={plant.wirePower} />
+        <Stat label="Irradiance" value={plant.irradiateIntensity} />
         <Stat label="Battery power" value={plant.batteryPower} />
         <Stat label="Charge" value={plant.chargePower} />
         <Stat label="Discharge" value={plant.dischargePower} />
@@ -155,9 +160,23 @@ function Plant({ plant }) {
 
       <section className="block">
         <h3>Today</h3>
-        <p>{plant.dailyGeneration == null ? "Missing" : `${formatNumber(plant.dailyGeneration)} kWh`}</p>
-        {plant.dailyGenerationNote ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
         {plant.dailyDate && plant.dailyDate !== "sample" ? <p className="fine">Local date {plant.dailyDate}</p> : null}
+        {plant.dailyGenerationNote ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
+        <div className="stats">
+          <Stat label="Generation" value={plant.daily.generation} unit="kWh" />
+          <Stat label="Consumption" value={plant.daily.consumption} unit="kWh" />
+          <Stat label="Battery charge" value={plant.daily.batteryCharge} unit="kWh" />
+          <Stat label="Battery discharge" value={plant.daily.batteryDischarge} unit="kWh" />
+          <Stat label="Grid purchase" value={plant.daily.gridPurchase} unit="kWh" />
+          <Stat label="Grid export" value={plant.daily.gridExport} unit="kWh" />
+          <Stat label="To load" value={plant.daily.toLoad} unit="kWh" />
+          <Stat label="To battery" value={plant.daily.toBattery} unit="kWh" />
+          <Stat label="To grid" value={plant.daily.toGrid} unit="kWh" />
+          <Stat label="Charge from PV" value={plant.daily.chargeFromPv} unit="kWh" />
+          <Stat label="Charge from grid" value={plant.daily.chargeFromGrid} unit="kWh" />
+          <Stat label="Full-load hours" value={plant.daily.fullPowerHours} unit="h" />
+        </div>
+        {plant.daily.peakPeriod ? <p className="fine">Peak period {plant.daily.peakPeriod}</p> : null}
       </section>
 
       <section className="block">
@@ -166,43 +185,71 @@ function Plant({ plant }) {
           {plant.devices.total} total · {plant.devices.online} online · {plant.devices.offline} offline
           {plant.devices.unreported ? ` · ${plant.devices.unreported} without a connect status` : ""}
         </p>
-        {plant.devices.groups.map((group) => (
-          <p className="fine" key={group.type}>
-            {group.type}: {group.online} online, {group.offline} offline
-            {group.unreported ? `, ${group.unreported} unreported` : ""}
-          </p>
-        ))}
-        {plant.devices.offlineDevices.map((device) => (
-          <p className="fine" key={device.serial}>{device.type} offline · {device.serial}</p>
-        ))}
         {plant.devicesError ? <p className="warn">{plant.devicesError}</p> : null}
-      </section>
-
-      <section className="block">
-        <h3>Alarms</h3>
-        {plant.alarmsError ? <p className="warn">{plant.alarmsError}</p> : null}
-        {plant.alarms.length === 0 && !plant.alarmsError ? <p>No station alarms in the last day.</p> : null}
-        {plant.alarms.map((alarm, index) => (
-          <div className="alarm" key={`${alarm.title}-${alarm.startedAt ?? index}`}>
-            <strong>{alarm.title}</strong>
-            <p className="fine">
-              {[levelLabel(alarm.level), alarm.status, alarm.startedLabel || alarm.startedAt].filter(Boolean).join(" · ")}
+        {plant.deviceLatestError ? <p className="warn">{plant.deviceLatestError}</p> : null}
+        {plant.devices.rows.map((device) => (
+          <div className="device" key={device.serial || device.type}>
+            <p>
+              <strong>{device.type}</strong>
+              {device.serial ? ` · ${device.serial}` : ""}
+              {` · ${device.link}`}
             </p>
-            {alarm.detail ? <p className="fine">{alarm.detail}</p> : null}
+            {device.collectionLabel ? <p className="fine">Collected {device.collectionLabel}</p> : null}
+            {device.sampleNote ? <p className="fine">{device.sampleNote}</p> : null}
+            {device.points.length > 0 ? (
+              <div className="points">
+                {device.points.map((point) => (
+                  <p key={`${device.serial}-${point.key}`} className="point">
+                    <span>{point.key}</span>
+                    <strong>{point.value == null ? "Missing" : `${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
+                  </p>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
       </section>
+
+      <AlarmList title="Station alarms" alarms={plant.alarms} error={plant.alarmsError} empty="No station alarms in the last day." />
+      <AlarmList title="Device alarms" alarms={plant.deviceAlarms} error={plant.deviceAlarmsError} empty="No device alarms in the last day." />
     </article>
   );
 }
 
-function Stat({ label, value }) {
+function AlarmList({ title, alarms, error, empty }) {
+  return (
+    <section className="block">
+      <h3>{title}</h3>
+      {error ? <p className="warn">{error}</p> : null}
+      {alarms.length === 0 && !error ? <p>{empty}</p> : null}
+      {alarms.map((alarm, index) => (
+        <div className="alarm" key={`${alarm.source}-${alarm.title}-${alarm.startedAt ?? index}`}>
+          <strong>{alarm.title}</strong>
+          <p className="fine">
+            {[alarm.source, levelLabel(alarm.level), alarm.impact == null ? null : `Impact ${alarm.impact}`, alarm.status, alarm.startedLabel || alarm.startedAt, alarm.endedLabel ? `ended ${alarm.endedLabel}` : null].filter(Boolean).join(" · ")}
+          </p>
+          {alarm.detail ? <p className="fine">{alarm.detail}</p> : null}
+          {alarm.reason ? <p className="fine">Reason: {alarm.reason}</p> : null}
+          {alarm.solution ? <p className="fine">Solution: {alarm.solution}</p> : null}
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function Stat({ label, value, unit }) {
+  const missing = value == null || value === "";
+  const shown = missing ? "Missing" : typeof value === "string" ? value : formatNumber(value);
   return (
     <div className="stat">
       <dt>{label}</dt>
-      <dd>{formatNumber(value)}</dd>
+      <dd>{shown}{!missing && unit ? ` ${unit}` : ""}</dd>
     </div>
   );
+}
+
+function formatPoint(value) {
+  return typeof value === "number" ? formatNumber(value) : String(value);
 }
 
 function formatStamp(value) {

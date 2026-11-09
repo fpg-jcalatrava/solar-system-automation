@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { localDate, pickDailyGeneration, shapePlant, summarizeDevices } from "../lib/normalize.js";
+import { localDate, pickDailyGeneration, pickDailySummary, shapePlant, summarizeDevices } from "../lib/normalize.js";
 
 test("null power stays missing and a negative battery value is kept", () => {
   const plant = shapePlant({
@@ -22,6 +22,25 @@ test("null power stays missing and a negative battery value is kept", () => {
   assert.equal(plant.alarms[0].title, "Grid");
   assert.match(plant.alarms[0].startedLabel, /2023/);
   assert.notEqual(plant.alarms[0].startedLabel, "1700000000");
+});
+
+test("daily energy keeps the split Deye returns and does not treat null as zero", () => {
+  const summary = pickDailySummary({
+    dailyData: [{
+      date: "2026-11-09",
+      generation: 11.5,
+      consumption: null,
+      gridExport: 1,
+      generationUsage: { toGrid: 1 },
+      batteryChargeSource: { fromPv: 2, fromGrid: 0 },
+    }],
+  }, "2026-11-09");
+  assert.equal(summary.generation, 11.5);
+  assert.equal(summary.consumption, null);
+  assert.equal(summary.gridExport, 1);
+  assert.equal(summary.toGrid, 1);
+  assert.equal(summary.chargeFromPv, 2);
+  assert.equal(summary.chargeFromGrid, 0);
 });
 
 test("daily generation prefers the matching local date and does not treat null as zero", () => {
