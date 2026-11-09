@@ -4,6 +4,7 @@ import { assertReadOnly } from "../lib/allowlist.js";
 
 test("read tools used by the board are allowed", () => {
   for (const name of [
+    "get_skill_info",
     "get_access_token",
     "account_info",
     "list_stations",
