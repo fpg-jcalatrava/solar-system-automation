@@ -1,0 +1,20 @@
+{
+  "name": "solar-system-automation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 43123",
+    "build": "next build",
+    "start": "next start --hostname 127.0.0.1 --port 43123",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "next": "^15.5.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}
