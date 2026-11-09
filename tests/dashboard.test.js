@@ -79,8 +79,31 @@ test("a live read asks only for token, stations, latest, devices, alarms, and to
     station_alert_list: async () => ({ ok: true, data: { total: 0, stationAlertItems: [] } }),
     get_station_generation_days: async () => ({
       ok: true,
-      data: { dailyData: [{ date: "2026-11-09", generation: 11.5 }] },
+      data: {
+        dailyData: [{
+          date: "2026-11-09",
+          generation: 11.5,
+          consumption: 7,
+          batteryCharge: 2,
+          gridPurchase: 0.5,
+          gridExport: 1.5,
+          generationUsage: { toLoad: 6, toBattery: 2, toGrid: 1.5 },
+          batteryChargeSource: { fromPv: 2, fromGrid: 0 },
+          fullPowerHours: 2.3,
+        }],
+      },
     }),
+    device_latest: async (args) => ({
+      ok: true,
+      data: {
+        deviceDataList: [{
+          deviceSn: args.body.deviceList[0],
+          deviceState: 1,
+          dataList: [{ key: "AC Voltage L1", unit: "V", value: 230 }],
+        }],
+      },
+    }),
+    device_alert_list: async () => ({ ok: true, data: { alertList: [], total: 0 } }),
   });
   const data = await loadLive(creds(), call, now);
   assert.equal(data.ok, true);
@@ -89,7 +112,11 @@ test("a live read asks only for token, stations, latest, devices, alarms, and to
   assert.equal(data.plants[0].generationPower, 1500);
   assert.equal(data.plants[1].generationPower, null);
   assert.equal(data.plants[0].dailyGeneration, 11.5);
+  assert.equal(data.plants[0].daily.consumption, 7);
+  assert.equal(data.plants[0].daily.toLoad, 6);
+  assert.equal(data.plants[0].daily.chargeFromPv, 2);
   assert.equal(data.plants[0].devices.online, 1);
+  assert.equal(data.plants[0].devices.rows[0].points[0].unit, "V");
   const names = calls.map((entry) => entry.name);
   assert.deepEqual(new Set(names), new Set([
     "get_access_token",
@@ -97,6 +124,8 @@ test("a live read asks only for token, stations, latest, devices, alarms, and to
     "list_stations",
     "get_station_latest",
     "list_station_devices",
+    "device_latest",
+    "device_alert_list",
     "station_alert_list",
     "get_station_generation_days",
   ]));

@@ -10,6 +10,8 @@ test("read tools used by the board are allowed", () => {
     "list_stations",
     "get_station_latest",
     "list_station_devices",
+    "device_latest",
+    "device_alert_list",
     "station_alert_list",
     "get_station_generation_days",
     "station_history",
