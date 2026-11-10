@@ -571,6 +571,8 @@ function AlarmList({ title, alarms, error, empty }) {
 function DailyTable({ rows }) {
   const visible = rows.filter(([, value]) => hasReading(value) || (typeof value === "string" && value !== ""));
   if (visible.length === 0) return null;
+  const mid = Math.ceil(visible.length / 2);
+  const pairs = visible.slice(0, mid).map((left, index) => [left, visible[mid + index] ?? null]);
   return (
     <div className="table-wrap">
       <table className="daily">
@@ -578,19 +580,27 @@ function DailyTable({ rows }) {
           <tr>
             <th scope="col">Reading</th>
             <th scope="col">Value</th>
+            <th scope="col">Reading</th>
+            <th scope="col">Value</th>
           </tr>
         </thead>
         <tbody>
-          {visible.map(([label, value, unit]) => (
-            <tr key={label}>
-              <th scope="row">{label}</th>
-              <td>{typeof value === "string" ? value : formatNumber(value)}{unit ? <span className="unit">{unit}</span> : null}</td>
+          {pairs.map(([left, right]) => (
+            <tr key={left[0]}>
+              <th scope="row">{left[0]}</th>
+              <td><DailyValue value={left[1]} unit={left[2]} /></td>
+              {right ? <th scope="row">{right[0]}</th> : <td />}
+              {right ? <td><DailyValue value={right[1]} unit={right[2]} /></td> : <td />}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   );
+}
+
+function DailyValue({ value, unit }) {
+  return <>{typeof value === "string" ? value : formatNumber(value)}{unit ? <span className="unit">{unit}</span> : null}</>;
 }
 
 function Stat({ label, value, unit }) {

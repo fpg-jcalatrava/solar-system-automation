@@ -308,8 +308,15 @@ h1 {
   background: rgba(12, 15, 12, 0.35);
 }
 .daily tbody th { font-weight: 500; }
+.daily thead th:nth-child(even),
 .daily td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.daily thead th:nth-child(even) { font-weight: 500; }
+.daily tbody th:nth-child(3) { border-left: 1px solid var(--line); }
 .daily tbody tr:last-child th, .daily tbody tr:last-child td { border-bottom: 0; }
+
+@media (max-width: 720px) {
+  .daily th, .daily td { padding: 10px 8px; }
+}
 
 .figure { font-size: 32px; line-height: 1; }
 .tile.energy .figure { color: var(--energy); }
