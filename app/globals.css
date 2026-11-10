@@ -251,12 +251,53 @@ h1 {
     var(--surface);
   border-color: rgba(198, 240, 77, 0.28);
 }
-.tile.battery {
+.tile.battery, .tile.flow {
   background:
     linear-gradient(180deg, rgba(240, 193, 77, 0.12), rgba(240, 193, 77, 0.03)),
     var(--surface);
   border-color: rgba(240, 193, 77, 0.24);
 }
+.tile.use {
+  background:
+    linear-gradient(180deg, rgba(142, 224, 168, 0.12), rgba(142, 224, 168, 0.03)),
+    var(--surface);
+  border-color: rgba(142, 224, 168, 0.24);
+}
+.tile-head { display: flex; align-items: center; gap: 8px; }
+.tile-head .kicker { margin: 0; }
+.metric-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--energy);
+  background: rgba(198, 240, 77, 0.14);
+}
+.tile.use .metric-icon { color: var(--good); background: rgba(142, 224, 168, 0.14); }
+.tile.battery .metric-icon, .tile.flow .metric-icon { color: var(--battery); background: rgba(240, 193, 77, 0.16); }
+
+.table-wrap {
+  margin-top: 10px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+}
+.daily { width: 100%; border-collapse: collapse; }
+.daily th, .daily td { padding: 11px 14px; text-align: left; border-bottom: 1px solid var(--line); }
+.daily thead th {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  background: rgba(12, 15, 12, 0.35);
+}
+.daily tbody th { font-weight: 500; }
+.daily td { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.daily tbody tr:last-child th, .daily tbody tr:last-child td { border-bottom: 0; }
 
 .figure { font-size: 32px; line-height: 1; }
 .tile.energy .figure { color: var(--energy); }

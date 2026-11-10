@@ -217,20 +217,29 @@ function Plant({ plant, open, onToggle }) {
         <div className="spotlight">
           {hasReading(plant.generationPower) ? (
             <div className="tile energy">
-              <p className="kicker">Generation</p>
+              <div className="tile-head">
+                <span className="metric-icon" aria-hidden="true"><GenerationIcon /></span>
+                <p className="kicker">Generation</p>
+              </div>
               <p className="figure">{formatNumber(plant.generationPower)} <span>power</span></p>
             </div>
           ) : null}
           {hasReading(plant.consumptionPower) ? (
-            <div className="tile">
-              <p className="kicker">Consumption</p>
+            <div className="tile use">
+              <div className="tile-head">
+                <span className="metric-icon" aria-hidden="true"><ConsumptionIcon /></span>
+                <p className="kicker">Consumption</p>
+              </div>
               <p className="figure">{formatNumber(plant.consumptionPower)} <span>power</span></p>
             </div>
           ) : null}
           {hasReading(plant.batterySOC) ? <SocGauge value={plant.batterySOC} /> : null}
           {hasReading(plant.batteryPower) ? (
-            <div className="tile">
-              <p className="kicker">Battery power</p>
+            <div className="tile flow">
+              <div className="tile-head">
+                <span className="metric-icon" aria-hidden="true"><BatteryPowerIcon /></span>
+                <p className="kicker">Battery power</p>
+              </div>
               <p className="figure">{formatNumber(plant.batteryPower)}</p>
               <p className="fine">{batteryHint(plant.batteryPower)}</p>
             </div>
@@ -250,18 +259,18 @@ function Plant({ plant, open, onToggle }) {
           {plant.dailyDate && plant.dailyDate !== "sample" ? <p className="fine">Local date {plant.dailyDate}</p> : null}
         </div>
         {plant.dailyGenerationNote && !/missing|no daily row/i.test(plant.dailyGenerationNote) ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
-        <div className="stats">
-          <Stat label="Generation" value={plant.daily.generation} unit="kWh" />
-          <Stat label="Consumption" value={plant.daily.consumption} unit="kWh" />
-          <Stat label="Battery charge" value={plant.daily.batteryCharge} unit="kWh" />
-          <Stat label="Battery discharge" value={plant.daily.batteryDischarge} unit="kWh" />
-          <Stat label="Grid purchase" value={plant.daily.gridPurchase} unit="kWh" />
-          <Stat label="Grid export" value={plant.daily.gridExport} unit="kWh" />
-          <Stat label="To load" value={plant.daily.toLoad} unit="kWh" />
-          <Stat label="To battery" value={plant.daily.toBattery} unit="kWh" />
-          <Stat label="To grid" value={plant.daily.toGrid} unit="kWh" />
-          <Stat label="Full-load hours" value={plant.daily.fullPowerHours} unit="h" />
-        </div>
+        <DailyTable rows={[
+          ["Generation", plant.daily.generation, "kWh"],
+          ["Consumption", plant.daily.consumption, "kWh"],
+          ["Battery charge", plant.daily.batteryCharge, "kWh"],
+          ["Battery discharge", plant.daily.batteryDischarge, "kWh"],
+          ["Grid purchase", plant.daily.gridPurchase, "kWh"],
+          ["Grid export", plant.daily.gridExport, "kWh"],
+          ["To load", plant.daily.toLoad, "kWh"],
+          ["To battery", plant.daily.toBattery, "kWh"],
+          ["To grid", plant.daily.toGrid, "kWh"],
+          ["Full-load hours", plant.daily.fullPowerHours, "h"],
+        ]} />
         {plant.daily.peakPeriod ? <p className="fine peak">Peak period {plant.daily.peakPeriod}</p> : null}
       </section>
 
@@ -418,6 +427,42 @@ function deviceKind(type) {
   return "device";
 }
 
+function GenerationIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="10" r="3.2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M15.3 4.7l-1.6 1.6M6.3 13.7l-1.6 1.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ConsumptionIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M3.5 9.2 10 3.8l6.5 5.4V16a1.2 1.2 0 0 1-1.2 1.2H4.7A1.2 1.2 0 0 1 3.5 16V9.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M8 17.2v-4.2h4v4.2" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SocIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3" y="5.5" width="12" height="9" rx="1.8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M15 8.2h1.2A1.3 1.3 0 0 1 17.5 9.5v1a1.3 1.3 0 0 1-1.3 1.3H15" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5.5 10h5.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BatteryPowerIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M11.2 2.8 5.2 11h4.1L8.6 17.2 14.8 8.6H10.6L11.2 2.8Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function InverterIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -474,7 +519,10 @@ function SocGauge({ value }) {
   const filled = (pct / 100) * circumference;
   return (
     <div className="tile battery" aria-label={`State of charge ${formatSoc(value)}`}>
-      <p className="kicker">State of charge</p>
+      <div className="tile-head">
+        <span className="metric-icon" aria-hidden="true"><SocIcon /></span>
+        <p className="kicker">State of charge</p>
+      </div>
       <div className="gauge">
         <svg viewBox="0 0 72 72" aria-hidden="true">
           <circle className="gauge-track" cx="36" cy="36" r={radius} />
@@ -513,6 +561,31 @@ function AlarmList({ title, alarms, error, empty }) {
         </div>
       ))}
     </section>
+  );
+}
+
+function DailyTable({ rows }) {
+  const visible = rows.filter(([, value]) => hasReading(value) || (typeof value === "string" && value !== ""));
+  if (visible.length === 0) return null;
+  return (
+    <div className="table-wrap">
+      <table className="daily">
+        <thead>
+          <tr>
+            <th scope="col">Reading</th>
+            <th scope="col">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {visible.map(([label, value, unit]) => (
+            <tr key={label}>
+              <th scope="row">{label}</th>
+              <td>{typeof value === "string" ? value : formatNumber(value)}{unit ? <span className="unit">{unit}</span> : null}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
