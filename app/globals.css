@@ -277,6 +277,18 @@ h1 {
 }
 .tile.use .metric-icon { color: var(--good); background: rgba(142, 224, 168, 0.14); }
 .tile.battery .metric-icon, .tile.flow .metric-icon { color: var(--battery); background: rgba(240, 193, 77, 0.16); }
+.figure.charging, .flow-state.charging { color: #8ee0a8; }
+.figure.discharging, .flow-state.discharging { color: #79b4ff; }
+.flow-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.flow-state.idle { color: var(--muted); }
+.flow-state .dot { box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent); }
 
 .table-wrap {
   margin-top: 10px;

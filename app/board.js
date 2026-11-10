@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { batteryHint, formatNumber, formatSoc, levelLabel, statusTone } from "../lib/format.js";
+import { batteryFlow, formatNumber, formatSoc, levelLabel, statusTone } from "../lib/format.js";
 
 export function Board({ initial, viewer }) {
   const [data, setData] = useState(initial);
@@ -174,6 +174,7 @@ function Plant({ plant, open, onToggle }) {
   ].filter(Boolean).join(" · ");
   const place = [plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ");
   const status = plant.connectionStatus;
+  const battery = batteryFlow(plant.batteryPower);
   const panelId = `plant-panel-${plantKey(plant)}`;
   return (
     <article className={open ? "plant open" : "plant"}>
@@ -240,8 +241,11 @@ function Plant({ plant, open, onToggle }) {
                 <span className="metric-icon" aria-hidden="true"><BatteryPowerIcon /></span>
                 <p className="kicker">Battery power</p>
               </div>
-              <p className="figure">{formatNumber(plant.batteryPower)}</p>
-              <p className="fine">{batteryHint(plant.batteryPower)}</p>
+              <p className={`figure ${battery.tone}`}>{formatNumber(plant.batteryPower)}</p>
+              <p className={`flow-state ${battery.tone}`}>
+                <span className="dot" aria-hidden="true" />
+                {battery.label}
+              </p>
             </div>
           ) : null}
         </div>
