@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { batteryHint, formatNumber, formatSoc, levelLabel, statusTone } from "../lib/format.js";
 
 export function Board({ initial, viewer }) {
@@ -111,6 +111,10 @@ function Compare({ plants }) {
 }
 
 function Plant({ plant }) {
+  const [openDevice, setOpenDevice] = useState(null);
+  const deviceAlarms = openDevice
+    ? plant.deviceAlarms.filter((alarm) => alarm.source === openDevice.serial)
+    : [];
   return (
     <article className="plant">
       <header className="plant-head">
@@ -197,37 +201,188 @@ function Plant({ plant }) {
         </div>
         {plant.devicesError ? <p className="warn">{plant.devicesError}</p> : null}
         {plant.deviceLatestError ? <p className="warn">{plant.deviceLatestError}</p> : null}
-        {plant.devices.rows.map((device) => (
-          <div className="device" key={device.serial || device.type}>
-            <div className="device-head">
-              <div>
-                <p className="device-name">{device.type}</p>
-                {device.serial ? <p className="serial">{device.serial}</p> : null}
-              </div>
+        {plant.devices.rows.length === 0 ? <p className="empty">No devices in the plant list.</p> : null}
+        <div className="device-grid">
+          {plant.devices.rows.map((device) => (
+            <button
+              key={device.serial || device.type}
+              type="button"
+              className={`device-card ${device.link}`}
+              onClick={() => setOpenDevice(device)}
+            >
+              <span className="device-icon" aria-hidden="true"><DeviceIcon type={device.type} /></span>
+              <span className="device-copy">
+                <span className="device-name">{device.type}</span>
+                {device.serial ? <span className="serial">{device.serial}</span> : <span className="serial">Serial missing</span>}
+              </span>
               <span className={`status ${statusTone(device.link)}`}>
                 <span className="dot" aria-hidden="true" />
                 {device.link}
               </span>
-            </div>
-            {device.collectionLabel ? <p className="fine">Collected {device.collectionLabel}</p> : null}
-            {device.sampleNote ? <p className="fine">{device.sampleNote}</p> : null}
-            {device.points.length > 0 ? (
-              <div className="points">
-                {device.points.map((point) => (
-                  <p key={`${device.serial}-${point.key}`} className="point">
-                    <span>{point.key}</span>
-                    <strong>{point.value == null ? "Missing" : `${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
-                  </p>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ))}
+              <span className="device-preview">{devicePreview(device)}</span>
+            </button>
+          ))}
+        </div>
+        {openDevice ? (
+          <DeviceModal device={openDevice} alarms={deviceAlarms} onClose={() => setOpenDevice(null)} />
+        ) : null}
       </section>
 
       <AlarmList title="Station alarms" alarms={plant.alarms} error={plant.alarmsError} empty="No station alarms in the last day." />
       <AlarmList title="Device alarms" alarms={plant.deviceAlarms} error={plant.deviceAlarmsError} empty="No device alarms in the last day." />
     </article>
+  );
+}
+
+function DeviceModal({ device, alarms, onClose }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    function handleClose() {
+      onCloseRef.current();
+    }
+    dialog.addEventListener("close", handleClose);
+    return () => {
+      dialog.removeEventListener("close", handleClose);
+      if (dialog.open) dialog.close();
+    };
+  }, []);
+
+  const titleId = `device-${device.serial || device.type}`;
+  return (
+    <dialog
+      ref={dialogRef}
+      className="device-dialog"
+      aria-labelledby={titleId}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}
+    >
+      <div className="dialog-card">
+        <header className="dialog-head">
+          <span className={`device-icon ${device.link}`} aria-hidden="true"><DeviceIcon type={device.type} /></span>
+          <div>
+            <p className="kicker">Device</p>
+            <h3 id={titleId}>{device.type}</h3>
+            <p className="serial">{device.serial || "Serial missing"}</p>
+          </div>
+          <button className="dialog-close" type="button" onClick={() => dialogRef.current?.close()}>Close</button>
+        </header>
+        <dl className="dialog-facts">
+          <div>
+            <dt>Connect</dt>
+            <dd>{device.link}</dd>
+          </div>
+          <div>
+            <dt>Collected</dt>
+            <dd>{device.collectionLabel || "Missing"}</dd>
+          </div>
+        </dl>
+        {device.sampleNote ? <p className="fine">{device.sampleNote}</p> : null}
+        <h4>Readings</h4>
+        {device.points.length === 0 ? <p className="empty">No latest sample for this device.</p> : (
+          <div className="points">
+            {device.points.map((point) => (
+              <p key={`${device.serial}-${point.key}`} className="point">
+                <span>{point.key}</span>
+                <strong>{point.value == null ? "Missing" : `${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
+              </p>
+            ))}
+          </div>
+        )}
+        <h4>Alarms</h4>
+        {alarms.length === 0 ? <p className="empty">No device alarms in the last day.</p> : alarms.map((alarm, index) => (
+          <div className="alarm" key={`${alarm.title}-${alarm.startedAt ?? index}`}>
+            <strong>{alarm.title}</strong>
+            <p className="fine">
+              {[levelLabel(alarm.level), alarm.impact == null ? null : `Impact ${alarm.impact}`, alarm.status, alarm.startedLabel || alarm.startedAt, alarm.endedLabel ? `ended ${alarm.endedLabel}` : null].filter(Boolean).join(" · ")}
+            </p>
+            {alarm.detail ? <p className="fine">{alarm.detail}</p> : null}
+            {alarm.reason ? <p className="fine">Reason: {alarm.reason}</p> : null}
+            {alarm.solution ? <p className="fine">Solution: {alarm.solution}</p> : null}
+          </div>
+        ))}
+      </div>
+    </dialog>
+  );
+}
+
+function devicePreview(device) {
+  if (device.points.length === 0) return device.sampleNote || "No latest sample";
+  const first = device.points[0];
+  const value = first.value == null ? "Missing" : `${formatPoint(first.value)}${first.unit ? ` ${first.unit}` : ""}`;
+  const more = device.points.length > 1 ? ` +${device.points.length - 1}` : "";
+  return `${first.key} ${value}${more}`;
+}
+
+function DeviceIcon({ type }) {
+  const kind = deviceKind(type);
+  if (kind === "inverter") return <InverterIcon />;
+  if (kind === "battery") return <BatteryIcon />;
+  if (kind === "collector") return <CollectorIcon />;
+  if (kind === "meter") return <MeterIcon />;
+  return <ChipIcon />;
+}
+
+function deviceKind(type) {
+  const value = String(type || "").toLowerCase();
+  if (value.includes("invert")) return "inverter";
+  if (value.includes("batter") || value.includes("bms")) return "battery";
+  if (value.includes("collect") || value.includes("logger") || value.includes("dongle")) return "collector";
+  if (value.includes("meter")) return "meter";
+  return "device";
+}
+
+function InverterIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="2.5" y="4" width="15" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M5 10h2.2l1.2-2.4 1.8 4.8 1.2-2.4H15" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BatteryIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="3" y="5" width="12" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M15 8h1.5A1.5 1.5 0 0 1 18 9.5v1A1.5 1.5 0 0 1 16.5 12H15" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M6 10h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function CollectorIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 16V9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="10" cy="16" r="1.2" fill="currentColor" />
+      <path d="M6.5 11.5a4.5 4.5 0 0 1 7 0M4 9a8 8 0 0 1 12 0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function MeterIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <circle cx="10" cy="11" r="6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M10 11l3-2.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M7 4h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChipIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <rect x="5" y="5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 2.5v2.5M12 2.5v2.5M8 15v2.5M12 15v2.5M2.5 8H5M2.5 12H5M15 8h2.5M15 12h2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
   );
 }
 

@@ -243,9 +243,78 @@ h1 {
   font-weight: 500;
   color: var(--muted);
 }
-.device { margin-top: 10px; padding: 12px 14px; background: var(--surface-2); }
-.device-name { margin: 0; font-weight: 600; }
-.serial { margin: 3px 0 0; font-family: var(--font-mono), ui-monospace, monospace; font-size: 12px; color: var(--muted); }
+.device-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-top: 10px; }
+.device-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "icon copy"
+    "icon status"
+    "preview preview";
+  gap: 4px 10px;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 14px;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.device-card:hover { border-color: rgba(198, 240, 77, 0.45); }
+.device-card:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.device-icon {
+  grid-area: icon;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--energy);
+  background: rgba(198, 240, 77, 0.12);
+}
+.device-card.offline .device-icon, .dialog-head .device-icon.offline { color: var(--bad); background: var(--bad-bg); }
+.device-card.unreported .device-icon { color: var(--muted); background: rgba(167, 176, 164, 0.12); }
+.device-copy { grid-area: copy; min-width: 0; display: flex; flex-direction: column; }
+.device-card .status { grid-area: status; justify-self: start; }
+.device-name { font-weight: 600; }
+.device-preview { grid-area: preview; margin-top: 6px; color: var(--muted); font-size: 13px; }
+.serial { margin: 2px 0 0; font-family: var(--font-mono), ui-monospace, monospace; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+
+.device-dialog {
+  width: min(560px, calc(100% - 28px));
+  max-height: min(84vh, 760px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+.device-dialog::backdrop { background: rgba(6, 8, 6, 0.72); }
+.dialog-card { padding: 18px; overflow: auto; max-height: min(84vh, 760px); }
+.dialog-head { display: flex; gap: 12px; align-items: flex-start; }
+.dialog-head h3 { margin: 2px 0 0; font-size: 20px; letter-spacing: -0.02em; text-transform: none; color: var(--ink); font-weight: 600; }
+.dialog-head .device-icon { flex: none; }
+.dialog-close {
+  margin-left: auto;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  border-radius: 9px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+.dialog-close:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.dialog-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0 0; }
+.dialog-facts div { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.dialog-facts dt { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+.dialog-facts dd { margin: 4px 0 0; font-weight: 600; }
+.dialog-card h4 { margin: 16px 0 8px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; color: var(--muted); }
 .points { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 10px; }
 .point {
   display: flex;
@@ -276,7 +345,8 @@ h1 {
 
 @media (max-width: 800px) {
   .spotlight { grid-template-columns: 1fr; }
-  .plant-head, .title-row, .device-head, .block-head { flex-direction: column; align-items: flex-start; }
+  .plant-head, .title-row, .block-head { flex-direction: column; align-items: flex-start; }
+  .dialog-facts { grid-template-columns: 1fr; }
   .when { text-align: left; max-width: none; }
 }
 
