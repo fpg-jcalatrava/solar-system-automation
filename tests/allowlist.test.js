@@ -4,11 +4,14 @@ import { assertReadOnly } from "../lib/allowlist.js";
 
 test("read tools used by the board are allowed", () => {
   for (const name of [
+    "get_skill_info",
     "get_access_token",
     "account_info",
     "list_stations",
     "get_station_latest",
     "list_station_devices",
+    "device_latest",
+    "device_alert_list",
     "station_alert_list",
     "get_station_generation_days",
     "station_history",

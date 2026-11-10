@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { localDate, pickDailyGeneration, shapePlant, summarizeDevices } from "../lib/normalize.js";
+import { localDate, nestRegisteredBatteries, pickDailyGeneration, pickDailySummary, shapePlant, summarizeDevices } from "../lib/normalize.js";
 
 test("null power stays missing and a negative battery value is kept", () => {
   const plant = shapePlant({
@@ -24,6 +24,25 @@ test("null power stays missing and a negative battery value is kept", () => {
   assert.notEqual(plant.alarms[0].startedLabel, "1700000000");
 });
 
+test("daily energy keeps the split Deye returns and does not treat null as zero", () => {
+  const summary = pickDailySummary({
+    dailyData: [{
+      date: "2026-11-09",
+      generation: 11.5,
+      consumption: null,
+      gridExport: 1,
+      generationUsage: { toGrid: 1 },
+      batteryChargeSource: { fromPv: 2, fromGrid: 0 },
+    }],
+  }, "2026-11-09");
+  assert.equal(summary.generation, 11.5);
+  assert.equal(summary.consumption, null);
+  assert.equal(summary.gridExport, 1);
+  assert.equal(summary.toGrid, 1);
+  assert.equal(summary.chargeFromPv, 2);
+  assert.equal(summary.chargeFromGrid, 0);
+});
+
 test("daily generation prefers the matching local date and does not treat null as zero", () => {
   const picked = pickDailyGeneration({
     dailyData: [
@@ -37,6 +56,17 @@ test("daily generation prefers the matching local date and does not treat null a
     stationDataItems: [{ year: 2026, month: 11, day: 9, generationValue: 6.5 }],
   }, "2026-11-09");
   assert.equal(history.value, 6.5);
+});
+
+test("a battery serial inside another battery is nested there", () => {
+  const rows = nestRegisteredBatteries([
+    { type: "INVERTER", serial: "INV-100001", points: [{ key: "Battery SN", value: "BAT-100001" }], nested: [] },
+    { type: "BATTERY", serial: "BAT-100001", points: [{ key: "Battery SN", value: "PACK-100001" }], nested: [] },
+    { type: "BATTERY", serial: "PACK-100001", points: [{ key: "SOC", value: 70, unit: "%" }], nested: [] },
+  ]);
+  assert.deepEqual(rows.map((row) => row.serial), ["INV-100001", "BAT-100001"]);
+  assert.equal(rows[1].nested[0].serial, "PACK-100001");
+  assert.equal(rows[0].nested.length, 0);
 });
 
 test("device connect status uses 1 and 0 only", () => {
