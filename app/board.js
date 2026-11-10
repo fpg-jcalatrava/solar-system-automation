@@ -7,6 +7,8 @@ export function Board({ initial, viewer }) {
   const [data, setData] = useState(initial);
   const [pending, setPending] = useState(false);
   const [problem, setProblem] = useState("");
+  const [query, setQuery] = useState("");
+  const [openId, setOpenId] = useState(() => plantKey(initial.plants[0]));
 
   async function refresh() {
     setPending(true);
@@ -37,6 +39,13 @@ export function Board({ initial, viewer }) {
   }, []);
 
   const fetched = formatStamp(data.fetchedAt);
+  const plants = data.plants.filter((plant) => plantMatches(plant, query));
+
+  useEffect(() => {
+    if (!query.trim() || plants.length !== 1) return;
+    setOpenId(plantKey(plants[0]));
+  }, [query, data.plants]);
+
   return (
     <main className="shell">
       <header className="top">
@@ -74,10 +83,32 @@ export function Board({ initial, viewer }) {
       ) : null}
       {problem ? <div className="banner error" role="alert"><p>{problem}</p></div> : null}
 
-      <Compare plants={data.plants} />
+      <label className="search">
+        <span className="sr">Search plants</span>
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search plants, places, or devices"
+          aria-label="Search plants"
+        />
+      </label>
+
+      <Compare plants={plants} />
 
       <section className="grid">
-        {data.plants.map((plant) => <Plant key={plant.id || plant.name} plant={plant} />)}
+        {plants.length === 0 ? <p className="empty">No plants match that search.</p> : null}
+        {plants.map((plant) => {
+          const key = plantKey(plant);
+          return (
+            <Plant
+              key={key}
+              plant={plant}
+              open={openId === key}
+              onToggle={() => setOpenId((current) => current === key ? null : key)}
+            />
+          );
+        })}
       </section>
 
       <p className="footnote">
@@ -110,7 +141,28 @@ function Compare({ plants }) {
   );
 }
 
-function Plant({ plant }) {
+function plantKey(plant) {
+  if (!plant) return null;
+  return plant.id || plant.name;
+}
+
+function plantMatches(plant, query) {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  const devices = plant.devices?.rows ?? [];
+  const haystack = [
+    plant.name,
+    plant.id,
+    plant.location,
+    plant.ownerName,
+    plant.gridType,
+    plant.connectionStatus,
+    ...devices.flatMap((device) => [device.type, device.serial]),
+  ].filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(needle);
+}
+
+function Plant({ plant, open, onToggle }) {
   const [openDevice, setOpenDevice] = useState(null);
   const deviceAlarms = openDevice
     ? plant.deviceAlarms.filter((alarm) => alarm.source === openDevice.serial)
@@ -122,28 +174,42 @@ function Plant({ plant }) {
   ].filter(Boolean).join(" · ");
   const place = [plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ");
   const status = plant.connectionStatus;
+  const panelId = `plant-panel-${plantKey(plant)}`;
   return (
-    <article className="plant">
-      <header className="plant-head">
-        <div>
-          <div className="title-row">
-            <h2>{plant.name}</h2>
-            {status ? (
-              <span className={`status ${statusTone(status)}`}>
-                <span className="dot" aria-hidden="true" />
-                {status}
-              </span>
-            ) : null}
-          </div>
-          {identity ? <p className="fine">{identity}</p> : null}
-          {place ? <p className="fine">{place}</p> : null}
-        </div>
-        <div className="when">
-          {plant.lastUpdateLabel ? <p>Last update {plant.lastUpdateLabel}</p> : null}
-          {plant.stale === true ? <p className="warn">More than an hour old. The plant may be offline or delayed.</p> : null}
-        </div>
-      </header>
+    <article className={open ? "plant open" : "plant"}>
+      <h2>
+        <button
+          type="button"
+          className="accordion-toggle"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={onToggle}
+        >
+          <span className="chevron" aria-hidden="true" />
+          <span className="accordion-copy">
+            <span className="title-row">
+              <span className="plant-name">{plant.name}</span>
+              {status ? (
+                <span className={`status ${statusTone(status)}`}>
+                  <span className="dot" aria-hidden="true" />
+                  {status}
+                </span>
+              ) : null}
+            </span>
+            <span className="accordion-summary">
+              {hasReading(plant.generationPower) ? <span>{formatNumber(plant.generationPower)} power</span> : null}
+              {hasReading(plant.batterySOC) ? <span>{formatSoc(plant.batterySOC)} charge</span> : null}
+              {hasReading(plant.dailyGeneration) ? <span>{formatNumber(plant.dailyGeneration)} kWh today</span> : null}
+              {plant.lastUpdateLabel ? <span>Updated {plant.lastUpdateLabel}</span> : null}
+            </span>
+          </span>
+        </button>
+      </h2>
 
+      {open ? <div className="accordion-panel" id={panelId}>
+      {identity ? <p className="fine">{identity}</p> : null}
+      {place ? <p className="fine">{place}</p> : null}
+      {plant.stale === true ? <p className="warn">More than an hour old. The plant may be offline or delayed.</p> : null}
       {plant.latestError ? <p className="warn">{plant.latestError}</p> : null}
 
       <section className="block">
@@ -175,7 +241,6 @@ function Plant({ plant }) {
       <div className="stats">
         <Stat label="Grid" value={plant.gridPower} />
         <Stat label="Purchase" value={plant.purchasePower} />
-        <Stat label="Wire" value={plant.wirePower} />
         <Stat label="Irradiance" value={plant.irradiateIntensity} />
       </div>
 
@@ -239,6 +304,7 @@ function Plant({ plant }) {
 
       <AlarmList title="Station alarms" alarms={plant.alarms} error={plant.alarmsError} empty="No station alarms in the last day." />
       <AlarmList title="Device alarms" alarms={plant.deviceAlarms} error={plant.deviceAlarmsError} empty="No device alarms in the last day." />
+      </div> : null}
     </article>
   );
 }

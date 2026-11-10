@@ -137,6 +137,29 @@ h1 {
 .banner.error { border-color: rgba(255, 141, 122, 0.45); background: var(--bad-bg); }
 .gate h1 { font-size: 28px; margin: 6px 0 8px; }
 
+.search { display: block; margin: 0 0 16px; }
+.search input {
+  width: 100%;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.search input::placeholder { color: var(--faint); }
+.search input:focus-visible { outline: 2px solid var(--energy); outline-offset: 2px; }
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .compare { margin-bottom: 16px; }
 .compare h2, .plant h2 {
   margin: 0;
@@ -180,7 +203,34 @@ h1 {
 }
 .plant-head { align-items: flex-start; }
 .title-row, .device-head, .block-head { align-items: center; }
-.plant h2 { font-size: 22px; }
+.plant h2 { margin: 0; font-size: 22px; }
+.accordion-toggle {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.accordion-toggle:focus-visible { outline: 2px solid var(--energy); outline-offset: 3px; }
+.chevron {
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+}
+.plant.open .chevron { transform: rotate(45deg); margin-top: 6px; }
+.plant-name { font-weight: 600; }
+.accordion-summary { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; color: var(--muted); font-size: 13px; }
+.accordion-panel { margin-top: 16px; }
 .when { text-align: right; color: var(--muted); font-size: 13px; max-width: 280px; }
 .when p { margin: 0; }
 .fine { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
@@ -365,5 +415,5 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .gauge-fill { transition: none; }
+  .gauge-fill, .chevron { transition: none; }
 }
