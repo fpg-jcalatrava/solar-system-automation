@@ -175,6 +175,7 @@ function Plant({ plant, open, onToggle }) {
   const place = [plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ");
   const status = plant.connectionStatus;
   const battery = batteryFlow(plant.batteryPower);
+  const nestedBatteries = plant.devices.rows.reduce((sum, device) => sum + (device.nested?.length || 0), 0);
   const panelId = `plant-panel-${plantKey(plant)}`;
   return (
     <article className={open ? "plant open" : "plant"}>
@@ -283,6 +284,7 @@ function Plant({ plant, open, onToggle }) {
           <h3>Devices</h3>
           <p className="fine">
             {plant.devices.total} total · {plant.devices.online} online · {plant.devices.offline} offline
+            {nestedBatteries ? ` · ${nestedBatteries} registered inside a battery` : ""}
             {plant.devices.unreported ? ` · ${plant.devices.unreported} without a connect status` : ""}
           </p>
         </div>
@@ -373,6 +375,28 @@ function DeviceModal({ device, alarms, onClose }) {
             </div>
           ) : null}
         </dl>
+        {device.nested?.length ? (
+          <>
+            <h4>Registered inside</h4>
+            {device.nested.map((child) => (
+              <div className="nested" key={child.serial || child.type}>
+                <p className="device-name">{child.type}</p>
+                {child.serial ? <p className="serial">{child.serial}</p> : null}
+                <p className="fine">{child.link}{child.collectionLabel ? ` · Collected ${child.collectionLabel}` : ""}</p>
+                {child.points?.some((point) => point.value != null && point.value !== "") ? (
+                  <div className="points">
+                    {child.points.filter((point) => point.value != null && point.value !== "").map((point) => (
+                      <p key={`${child.serial}-${point.key}`} className="point">
+                        <span>{point.key}</span>
+                        <strong>{`${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </>
+        ) : null}
         {device.points.some((point) => point.value != null && point.value !== "") ? <h4>Readings</h4> : null}
         {device.points.some((point) => point.value != null && point.value !== "") ? (
           <div className="points">
@@ -402,11 +426,13 @@ function DeviceModal({ device, alarms, onClose }) {
 }
 
 function devicePreview(device) {
-  const points = device.points.filter((point) => point.value != null && point.value !== "");
-  if (points.length === 0) return "";
+  const inside = device.nested?.length ? `${device.nested.length} battery registered inside` : "";
+  const points = (device.points || []).filter((point) => point.value != null && point.value !== "");
+  if (points.length === 0) return inside;
   const first = points[0];
   const more = points.length > 1 ? ` +${points.length - 1}` : "";
-  return `${first.key} ${formatPoint(first.value)}${first.unit ? ` ${first.unit}` : ""}${more}`;
+  const reading = `${first.key} ${formatPoint(first.value)}${first.unit ? ` ${first.unit}` : ""}${more}`;
+  return inside ? `${reading} · ${inside}` : reading;
 }
 
 function hasReading(value) {
