@@ -188,10 +188,12 @@ h1 {
 
 .spotlight {
   display: grid;
-  grid-template-columns: 1.3fr 0.9fr 1fr;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 10px;
+  align-items: stretch;
 }
+.spotlight .tile { display: flex; flex-direction: column; min-height: 176px; }
 
 .tile.energy {
   background:
@@ -206,9 +208,8 @@ h1 {
   border-color: rgba(240, 193, 77, 0.24);
 }
 
-.figure { font-size: 40px; line-height: 1; }
+.figure { font-size: 32px; line-height: 1; }
 .tile.energy .figure { color: var(--energy); }
-.figure.quiet { font-size: 32px; }
 
 .gauge {
   position: relative;
@@ -344,7 +345,7 @@ h1 {
 .footnote { margin: 22px 0 0; color: var(--faint); font-size: 12px; line-height: 1.55; max-width: 78ch; }
 
 @media (max-width: 800px) {
-  .spotlight { grid-template-columns: 1fr; }
+  .spotlight { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .plant-head, .title-row, .block-head { flex-direction: column; align-items: flex-start; }
   .dialog-facts { grid-template-columns: 1fr; }
   .when { text-align: left; max-width: none; }

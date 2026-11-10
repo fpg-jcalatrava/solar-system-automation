@@ -83,7 +83,7 @@ export function Board({ initial, viewer }) {
       <p className="footnote">
         Live power and irradiance are shown as Deye returns them. Those tool schemas do not name a unit; Deye’s own power samples are in watts.
         Today’s energy figures are for the plant’s local date. Deye documents that energy in kilowatt-hours, and full-load hours as hours.
-        Device points keep the name and unit Deye sends. A null reading is shown as missing. Readings are fetched at most once a minute. This board only reads plants. It does not send inverter commands.
+        Device points keep the name and unit Deye sends. Readings are fetched at most once a minute. This board only reads plants. It does not send inverter commands.
       </p>
     </main>
   );
@@ -100,9 +100,9 @@ function Compare({ plants }) {
           <article key={plant.id || plant.name} className="compare-card">
             <p className="kicker">{plant.name}</p>
             <p className="metric">{formatNumber(plant.dailyGeneration)} <span>kWh</span></p>
-            <p className="fine">
-              {plant.dailyGenerationPerKw == null ? "Yield per installed kW is missing" : `${formatNumber(plant.dailyGenerationPerKw, 2)} kWh per installed kW`}
-            </p>
+            {plant.dailyGenerationPerKw == null ? null : (
+              <p className="fine">{formatNumber(plant.dailyGenerationPerKw, 2)} kWh per installed kW</p>
+            )}
           </article>
         ))}
       </div>
@@ -115,57 +115,68 @@ function Plant({ plant }) {
   const deviceAlarms = openDevice
     ? plant.deviceAlarms.filter((alarm) => alarm.source === openDevice.serial)
     : [];
+  const identity = [
+    plant.id ? `Plant ${plant.id}` : null,
+    plant.installedCapacity == null ? null : `${formatNumber(plant.installedCapacity)} kW installed`,
+    plant.timezone,
+  ].filter(Boolean).join(" · ");
+  const place = [plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ");
+  const status = plant.connectionStatus;
   return (
     <article className="plant">
       <header className="plant-head">
         <div>
           <div className="title-row">
             <h2>{plant.name}</h2>
-            <span className={`status ${statusTone(plant.connectionStatus)}`}>
-              <span className="dot" aria-hidden="true" />
-              {plant.connectionStatus || "Status missing"}
-            </span>
+            {status ? (
+              <span className={`status ${statusTone(status)}`}>
+                <span className="dot" aria-hidden="true" />
+                {status}
+              </span>
+            ) : null}
           </div>
-          <p className="fine">
-            {plant.id ? `Plant ${plant.id}` : "Plant id missing"}
-            {plant.installedCapacity == null ? "" : ` · ${formatNumber(plant.installedCapacity)} kW installed`}
-            {plant.timezone ? ` · ${plant.timezone}` : ""}
-          </p>
-          <p className="fine">
-            {[plant.location, plant.gridType, plant.ownerName, plant.operatingSince ? `Operating since ${plant.operatingSince}` : null].filter(Boolean).join(" · ") || "Place details were not in the plant list."}
-          </p>
+          {identity ? <p className="fine">{identity}</p> : null}
+          {place ? <p className="fine">{place}</p> : null}
         </div>
         <div className="when">
           {plant.lastUpdateLabel ? <p>Last update {plant.lastUpdateLabel}</p> : null}
           {plant.stale === true ? <p className="warn">More than an hour old. The plant may be offline or delayed.</p> : null}
-          {plant.stale === null ? <p className="fine">Last update time is missing.</p> : null}
         </div>
       </header>
 
       {plant.latestError ? <p className="warn">{plant.latestError}</p> : null}
 
-      <div className="spotlight">
-        <div className="tile energy">
-          <p className="kicker">Generation</p>
-          <p className="figure">{formatNumber(plant.generationPower)} <span>power</span></p>
-          <p className="fine">Live output</p>
+      <section className="block">
+        <h3>Current data</h3>
+        <div className="spotlight">
+          {hasReading(plant.generationPower) ? (
+            <div className="tile energy">
+              <p className="kicker">Generation</p>
+              <p className="figure">{formatNumber(plant.generationPower)} <span>power</span></p>
+            </div>
+          ) : null}
+          {hasReading(plant.consumptionPower) ? (
+            <div className="tile">
+              <p className="kicker">Consumption</p>
+              <p className="figure">{formatNumber(plant.consumptionPower)} <span>power</span></p>
+            </div>
+          ) : null}
+          {hasReading(plant.batterySOC) ? <SocGauge value={plant.batterySOC} /> : null}
+          {hasReading(plant.batteryPower) ? (
+            <div className="tile">
+              <p className="kicker">Battery power</p>
+              <p className="figure">{formatNumber(plant.batteryPower)}</p>
+              <p className="fine">{batteryHint(plant.batteryPower)}</p>
+            </div>
+          ) : null}
         </div>
-        <SocGauge value={plant.batterySOC} />
-        <div className="tile">
-          <p className="kicker">Battery power</p>
-          <p className="figure quiet">{formatNumber(plant.batteryPower)}</p>
-          <p className="fine">{batteryHint(plant.batteryPower)}</p>
-        </div>
-      </div>
+      </section>
 
       <div className="stats">
-        <Stat label="Consumption" value={plant.consumptionPower} />
         <Stat label="Grid" value={plant.gridPower} />
         <Stat label="Purchase" value={plant.purchasePower} />
         <Stat label="Wire" value={plant.wirePower} />
         <Stat label="Irradiance" value={plant.irradiateIntensity} />
-        <Stat label="Charge" value={plant.chargePower} />
-        <Stat label="Discharge" value={plant.dischargePower} />
       </div>
 
       <section className="block">
@@ -173,7 +184,7 @@ function Plant({ plant }) {
           <h3>Today</h3>
           {plant.dailyDate && plant.dailyDate !== "sample" ? <p className="fine">Local date {plant.dailyDate}</p> : null}
         </div>
-        {plant.dailyGenerationNote ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
+        {plant.dailyGenerationNote && !/missing|no daily row/i.test(plant.dailyGenerationNote) ? <p className="fine">{plant.dailyGenerationNote}</p> : null}
         <div className="stats">
           <Stat label="Generation" value={plant.daily.generation} unit="kWh" />
           <Stat label="Consumption" value={plant.daily.consumption} unit="kWh" />
@@ -184,8 +195,6 @@ function Plant({ plant }) {
           <Stat label="To load" value={plant.daily.toLoad} unit="kWh" />
           <Stat label="To battery" value={plant.daily.toBattery} unit="kWh" />
           <Stat label="To grid" value={plant.daily.toGrid} unit="kWh" />
-          <Stat label="Charge from PV" value={plant.daily.chargeFromPv} unit="kWh" />
-          <Stat label="Charge from grid" value={plant.daily.chargeFromGrid} unit="kWh" />
           <Stat label="Full-load hours" value={plant.daily.fullPowerHours} unit="h" />
         </div>
         {plant.daily.peakPeriod ? <p className="fine peak">Peak period {plant.daily.peakPeriod}</p> : null}
@@ -213,13 +222,13 @@ function Plant({ plant }) {
               <span className="device-icon" aria-hidden="true"><DeviceIcon type={device.type} /></span>
               <span className="device-copy">
                 <span className="device-name">{device.type}</span>
-                {device.serial ? <span className="serial">{device.serial}</span> : <span className="serial">Serial missing</span>}
+                {device.serial ? <span className="serial">{device.serial}</span> : null}
               </span>
               <span className={`status ${statusTone(device.link)}`}>
                 <span className="dot" aria-hidden="true" />
                 {device.link}
               </span>
-              <span className="device-preview">{devicePreview(device)}</span>
+              {devicePreview(device) ? <span className="device-preview">{devicePreview(device)}</span> : null}
             </button>
           ))}
         </div>
@@ -269,7 +278,7 @@ function DeviceModal({ device, alarms, onClose }) {
           <div>
             <p className="kicker">Device</p>
             <h3 id={titleId}>{device.type}</h3>
-            <p className="serial">{device.serial || "Serial missing"}</p>
+            {device.serial ? <p className="serial">{device.serial}</p> : null}
           </div>
           <button className="dialog-close" type="button" onClick={() => dialogRef.current?.close()}>Close</button>
         </header>
@@ -278,23 +287,24 @@ function DeviceModal({ device, alarms, onClose }) {
             <dt>Connect</dt>
             <dd>{device.link}</dd>
           </div>
-          <div>
-            <dt>Collected</dt>
-            <dd>{device.collectionLabel || "Missing"}</dd>
-          </div>
+          {device.collectionLabel ? (
+            <div>
+              <dt>Collected</dt>
+              <dd>{device.collectionLabel}</dd>
+            </div>
+          ) : null}
         </dl>
-        {device.sampleNote ? <p className="fine">{device.sampleNote}</p> : null}
-        <h4>Readings</h4>
-        {device.points.length === 0 ? <p className="empty">No latest sample for this device.</p> : (
+        {device.points.some((point) => point.value != null && point.value !== "") ? <h4>Readings</h4> : null}
+        {device.points.some((point) => point.value != null && point.value !== "") ? (
           <div className="points">
-            {device.points.map((point) => (
+            {device.points.filter((point) => point.value != null && point.value !== "").map((point) => (
               <p key={`${device.serial}-${point.key}`} className="point">
                 <span>{point.key}</span>
-                <strong>{point.value == null ? "Missing" : `${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
+                <strong>{`${formatPoint(point.value)}${point.unit ? ` ${point.unit}` : ""}`}</strong>
               </p>
             ))}
           </div>
-        )}
+        ) : null}
         <h4>Alarms</h4>
         {alarms.length === 0 ? <p className="empty">No device alarms in the last day.</p> : alarms.map((alarm, index) => (
           <div className="alarm" key={`${alarm.title}-${alarm.startedAt ?? index}`}>
@@ -313,11 +323,15 @@ function DeviceModal({ device, alarms, onClose }) {
 }
 
 function devicePreview(device) {
-  if (device.points.length === 0) return device.sampleNote || "No latest sample";
-  const first = device.points[0];
-  const value = first.value == null ? "Missing" : `${formatPoint(first.value)}${first.unit ? ` ${first.unit}` : ""}`;
-  const more = device.points.length > 1 ? ` +${device.points.length - 1}` : "";
-  return `${first.key} ${value}${more}`;
+  const points = device.points.filter((point) => point.value != null && point.value !== "");
+  if (points.length === 0) return "";
+  const first = points[0];
+  const more = points.length > 1 ? ` +${points.length - 1}` : "";
+  return `${first.key} ${formatPoint(first.value)}${first.unit ? ` ${first.unit}` : ""}${more}`;
+}
+
+function hasReading(value) {
+  return value != null && value !== "" && !Number.isNaN(value);
 }
 
 function DeviceIcon({ type }) {
@@ -437,14 +451,14 @@ function AlarmList({ title, alarms, error, empty }) {
 }
 
 function Stat({ label, value, unit }) {
-  const missing = value == null || value === "";
-  const shown = missing ? "Missing" : typeof value === "string" ? value : formatNumber(value);
+  if (!hasReading(value) && !(typeof value === "string" && value !== "")) return null;
+  const shown = typeof value === "string" ? value : formatNumber(value);
   return (
     <div className="stat">
       <p className="kicker">{label}</p>
-      <p className={missing ? "value missing" : "value"}>
+      <p className="value">
         {shown}
-        {!missing && unit ? <span className="unit">{unit}</span> : null}
+        {unit ? <span className="unit">{unit}</span> : null}
       </p>
     </div>
   );
